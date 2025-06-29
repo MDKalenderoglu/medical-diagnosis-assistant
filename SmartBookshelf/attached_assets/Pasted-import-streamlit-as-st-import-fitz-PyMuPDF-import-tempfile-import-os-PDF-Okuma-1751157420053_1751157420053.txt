@@ -1,0 +1,75 @@
+import streamlit as st
+import fitz  # PyMuPDF
+import tempfile
+import os
+
+# ========== PDF Okuma Fonksiyonu ==========
+def extract_text_and_images(pdf_file):
+    doc = fitz.open(pdf_file)
+    text = ""
+    images = []
+
+    for page_num in range(len(doc)):
+        page = doc[page_num]
+        text += page.get_text()
+
+        for img_index, img in enumerate(page.get_images(full=True)):
+            xref = img[0]
+            base_image = doc.extract_image(xref)
+            image_bytes = base_image["image"]
+            images.append(image_bytes)
+
+    doc.close()
+    return text, images
+
+# ========== Görsel "Öğrenme" Fonksiyonu (Placeholder) ==========
+def analyze_images(images):
+    return [f"Image {i+1}: Görsel analiz placeholder açıklaması." for i in range(len(images))]
+
+# ========== Fenotip Analizi ==========
+def analyze_phenotype(phenotype_description, pdf_text):
+    # PDF'teki metin kullanılarak basit örnek öneri döndürülür
+    return f"Verilen fenotip: {phenotype_description}\n\nKaynak PDF'ten olası tanı: 'Örnek Tanı (placeholder)'"
+
+# ========== Rapor Üretme ==========
+def generate_report(phenotype_result, image_analysis):
+    report = "=== Olası Tanı Raporu ===\n\n"
+    report += phenotype_result + "\n\n"
+    report += "=== Görsel Analiz ===\n"
+    for desc in image_analysis:
+        report += desc + "\n"
+    return report
+
+# ========== Streamlit Arayüzü ==========
+st.title("🧬 PDF Destekli Medikal Tanı Yardım Asistanı")
+
+uploaded_pdf = st.file_uploader("PDF dosyasını yükleyin", type=["pdf"])
+
+if uploaded_pdf:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+        tmp_file.write(uploaded_pdf.read())
+        tmp_path = tmp_file.name
+
+    pdf_text, images = extract_text_and_images(tmp_path)
+
+    st.subheader("PDF Metni (İlk 2000 karakter):")
+    st.write(pdf_text[:2000] + "...")
+
+    st.subheader("PDF Görselleri:")
+    for img_bytes in images:
+        st.image(img_bytes)
+
+    st.success("PDF başarıyla okundu ve analiz için hazır.")
+
+    phenotype_description = st.text_area("Fenotip (ör: unilateral kraniosinostoz, klinodaktili, kalp defekti)", "")
+
+    if st.button("Analizi Başlat"):
+        image_analysis = analyze_images(images)
+        phenotype_result = analyze_phenotype(phenotype_description, pdf_text)
+        report = generate_report(phenotype_result, image_analysis)
+
+        st.subheader("🔎 Sonuç Raporu")
+        st.text_area("Rapor", report, height=400)
+        st.download_button("📄 Raporu İndir", report, file_name="tani_raporu.txt")
+
+    os.unlink(tmp_path)
