@@ -9,7 +9,13 @@ import streamlit as st
 # Database configuration
 DATABASE_URL = os.getenv('DATABASE_URL')
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable not found")
+    # For Streamlit Cloud deployment, try st.secrets
+    try:
+        import streamlit as st
+        DATABASE_URL = st.secrets["DATABASE_URL"]
+    except:
+        # Use SQLite as fallback for local development
+        DATABASE_URL = "sqlite:///medical_diagnosis.db"
 
 engine = create_engine(str(DATABASE_URL))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
